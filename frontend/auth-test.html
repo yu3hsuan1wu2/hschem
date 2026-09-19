@@ -3,243 +3,195 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HS-CHEM｜Auth 測試頁</title>
+  <title>HS-CHEM｜Auth 診斷頁</title>
   <style>
-    :root {
-      color-scheme: light dark;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    body {
-      max-width: 760px;
-      margin: 0 auto;
-      padding: 32px 20px 64px;
-      line-height: 1.6;
-    }
-    h1 { margin-bottom: 8px; }
-    .muted { opacity: .72; }
-    .panel {
-      border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-      border-radius: 14px;
-      padding: 20px;
-      margin-top: 20px;
-    }
-    label {
-      display: block;
-      font-weight: 700;
-      margin-top: 14px;
-    }
-    input {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 10px 12px;
-      margin-top: 6px;
-      border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
-      border-radius: 10px;
-      font: inherit;
-    }
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 18px;
-    }
-    button {
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
-      cursor: pointer;
-      font: inherit;
-      font-weight: 700;
-    }
-    pre {
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-      background: color-mix(in srgb, currentColor 7%, transparent);
-      padding: 14px;
-      border-radius: 10px;
-      min-height: 72px;
-    }
-    .ok { color: #19703a; }
-    .error { color: #b42318; }
-    code { overflow-wrap: anywhere; }
+    :root { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; line-height: 1.6; }
+    .panel { border: 1px solid #c9c9c9; border-radius: 14px; padding: 20px; margin-top: 20px; }
+    label { display:block; font-weight:700; margin-top:14px; }
+    input { width:100%; box-sizing:border-box; padding:10px 12px; margin-top:6px; border:1px solid #aaa; border-radius:10px; font:inherit; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+    button { padding:10px 14px; border-radius:10px; border:1px solid #999; cursor:pointer; font:inherit; font-weight:700; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; background:#f3f3f3; color:#111; padding:14px; border-radius:10px; min-height:72px; }
+    .ok { color:#19703a; font-weight:700; }
+    .error { color:#b42318; font-weight:700; }
+    .muted { color:#666; }
   </style>
 </head>
 <body>
-  <h1>HS-CHEM｜Auth 測試頁</h1>
-  <p class="muted">
-    僅供《高校化學前哨戰》development / test 使用。
-    此頁只驗證 Supabase Auth，不處理課程作答資料。
-  </p>
+  <h1>HS-CHEM｜Auth 診斷頁</h1>
+  <p class="muted">Development / test only。此版不依賴外部 Supabase JS CDN，直接呼叫 Supabase Auth HTTP API。</p>
 
   <section class="panel">
-    <h2>測試學生登入</h2>
-
+    <h2>測試帳號</h2>
     <label for="email">Email</label>
     <input id="email" type="email" autocomplete="username" value="YHtest@gmail.com">
 
     <label for="password">Password</label>
     <input id="password" type="password" autocomplete="current-password"
-           placeholder="請輸入測試密碼；不要提交到 GitHub">
+      placeholder="請輸入測試密碼；密碼不會寫入 GitHub">
 
     <div class="actions">
       <button id="signUpBtn" type="button">建立測試帳號</button>
       <button id="signInBtn" type="button">登入</button>
-      <button id="signOutBtn" type="button">登出</button>
-      <button id="refreshBtn" type="button">重新讀取 Session</button>
+      <button id="signOutBtn" type="button">登出本次測試</button>
     </div>
   </section>
 
   <section class="panel">
-    <h2>目前狀態</h2>
-    <p id="status" class="muted">尚未讀取。</p>
-    <pre id="output">—</pre>
+    <h2>診斷結果</h2>
+    <p id="status" class="ok">頁面 JavaScript 已啟動。</p>
+    <pre id="output">請輸入測試密碼後按「建立測試帳號」。</pre>
   </section>
 
   <section class="panel">
     <h2>安全邊界</h2>
     <ul>
-      <li>本頁只使用 Supabase Project URL 與 publishable key。</li>
-      <li>不包含 service_role、secret key、Database password 或 access token。</li>
-      <li>密碼只存在於瀏覽器輸入欄位，不會寫入此檔案。</li>
-      <li>正式學生帳號與正式資料尚未啟用。</li>
+      <li>只使用 Project URL 與 publishable key。</li>
+      <li>不包含 service_role、secret key、Database password。</li>
+      <li>不顯示 access token / refresh token。</li>
+      <li>密碼只存在目前瀏覽器輸入欄位。</li>
     </ul>
   </section>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/+esm";
-
+  <script>
     const SUPABASE_URL = "https://ndtfapzcgxmaeqkisufz.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_y8IYtpUSp3uRbqQYYuaDKQ_BdqLb9QA";
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
     const emailEl = document.getElementById("email");
     const passwordEl = document.getElementById("password");
     const statusEl = document.getElementById("status");
     const outputEl = document.getElementById("output");
+    let accessToken = null;
 
-    function setMessage(message, kind = "muted") {
+    function setStatus(message, kind = "ok") {
       statusEl.className = kind;
       statusEl.textContent = message;
     }
 
-    function showUser(user, session) {
-      if (!user) {
-        outputEl.textContent = "目前沒有登入使用者。";
-        return;
-      }
-
-      outputEl.textContent = JSON.stringify({
-        user_id: user.id,
-        email: user.email,
-        email_confirmed_at: user.email_confirmed_at ?? null,
-        role: user.role ?? null,
-        session_expires_at: session?.expires_at ?? null
-      }, null, 2);
-    }
-
-    function getCredentials() {
+    function credentials() {
       const email = emailEl.value.trim();
       const password = passwordEl.value;
-
-      if (!email || !password) {
-        throw new Error("請輸入 Email 與 Password。");
-      }
-
+      if (!email || !password) throw new Error("請輸入 Email 與 Password。");
       return { email, password };
     }
 
-    async function refreshSession() {
-      setMessage("讀取 Session 中…");
-      const { data: { session }, error } = await supabase.auth.getSession();
+    function safeResult(response, body) {
+      const user = body && body.user ? body.user : (body && body.id ? body : null);
+      return {
+        http_status: response.status,
+        ok: response.ok,
+        error_code: body?.code ?? body?.error_code ?? null,
+        message: body?.msg ?? body?.message ?? body?.error_description ?? body?.error ?? null,
+        user: user ? {
+          id: user.id ?? null,
+          email: user.email ?? null,
+          email_confirmed_at: user.email_confirmed_at ?? null,
+          role: user.role ?? null
+        } : null
+      };
+    }
 
-      if (error) {
-        setMessage(error.message, "error");
-        outputEl.textContent = "—";
-        return;
+    async function post(path, payload, extraHeaders = {}) {
+      const response = await fetch(SUPABASE_URL + path, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_PUBLISHABLE_KEY,
+          "Content-Type": "application/json",
+          ...extraHeaders
+        },
+        body: JSON.stringify(payload)
+      });
+
+      let body = {};
+      try {
+        body = await response.json();
+      } catch {
+        body = { message: "回應不是 JSON。" };
       }
 
-      if (!session) {
-        setMessage("目前未登入。");
-        showUser(null, null);
-        return;
-      }
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-      if (userError) {
-        setMessage(userError.message, "error");
-        outputEl.textContent = "—";
-        return;
-      }
-
-      setMessage("已登入。真正的 Supabase Auth User ID 如下。", "ok");
-      showUser(user, session);
+      return { response, body };
     }
 
     document.getElementById("signUpBtn").addEventListener("click", async () => {
       try {
-        const { email, password } = getCredentials();
-        setMessage("建立測試帳號中…");
+        const { email, password } = credentials();
+        setStatus("正在送出註冊請求…", "muted");
+        outputEl.textContent = "—";
 
-        const { data, error } = await supabase.auth.signUp({ email, password });
+        const { response, body } = await post("/auth/v1/signup", { email, password });
+        const result = safeResult(response, body);
+        outputEl.textContent = JSON.stringify(result, null, 2);
 
-        if (error) throw error;
+        if (!response.ok) {
+          setStatus("Supabase 已收到請求，但拒絕建立帳號。請把上方診斷結果貼回來。", "error");
+          return;
+        }
 
-        if (data.session) {
-          setMessage("測試帳號已建立並登入。", "ok");
-          showUser(data.user, data.session);
+        accessToken = body.access_token ?? null;
+        if (result.user?.id) {
+          setStatus("註冊請求成功；已取得真正的 Supabase Auth UUID。", "ok");
         } else {
-          setMessage(
-            "帳號建立請求已完成，但尚未取得 Session。若此 Project 要求 Email confirmation，請先完成確認後再登入。"
-          );
-          showUser(data.user, null);
+          setStatus("註冊請求成功，但回應未包含 user id；請把診斷結果貼回來。", "muted");
         }
       } catch (error) {
-        setMessage(error.message ?? String(error), "error");
+        setStatus("瀏覽器端錯誤：註冊請求沒有完成。", "error");
+        outputEl.textContent = JSON.stringify({
+          error_type: error?.name ?? "Error",
+          message: error?.message ?? String(error)
+        }, null, 2);
       }
     });
 
     document.getElementById("signInBtn").addEventListener("click", async () => {
       try {
-        const { email, password } = getCredentials();
-        setMessage("登入中…");
+        const { email, password } = credentials();
+        setStatus("正在送出登入請求…", "muted");
+        outputEl.textContent = "—";
 
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const { response, body } = await post("/auth/v1/token?grant_type=password", { email, password });
+        const result = safeResult(response, body);
+        outputEl.textContent = JSON.stringify(result, null, 2);
 
-        if (error) throw error;
+        if (!response.ok) {
+          setStatus("Supabase 已收到登入請求，但登入失敗。", "error");
+          return;
+        }
 
-        setMessage("登入成功。", "ok");
-        showUser(data.user, data.session);
+        accessToken = body.access_token ?? null;
+        setStatus("登入成功。", "ok");
       } catch (error) {
-        setMessage(error.message ?? String(error), "error");
+        setStatus("瀏覽器端錯誤：登入請求沒有完成。", "error");
+        outputEl.textContent = JSON.stringify({
+          error_type: error?.name ?? "Error",
+          message: error?.message ?? String(error)
+        }, null, 2);
       }
     });
 
     document.getElementById("signOutBtn").addEventListener("click", async () => {
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        setMessage(error.message, "error");
+      if (!accessToken) {
+        setStatus("目前這個診斷頁沒有可登出的 Session。", "muted");
         return;
       }
 
-      setMessage("已登出。", "ok");
-      showUser(null, null);
-    });
+      try {
+        const response = await fetch(SUPABASE_URL + "/auth/v1/logout", {
+          method: "POST",
+          headers: {
+            "apikey": SUPABASE_PUBLISHABLE_KEY,
+            "Authorization": "Bearer " + accessToken
+          }
+        });
 
-    document.getElementById("refreshBtn").addEventListener("click", refreshSession);
-
-    supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setMessage("Auth 狀態已更新：已登入。", "ok");
-        showUser(session.user, session);
-      } else {
-        showUser(null, null);
+        accessToken = null;
+        outputEl.textContent = JSON.stringify({ http_status: response.status, ok: response.ok }, null, 2);
+        setStatus(response.ok ? "已登出本次測試。" : "登出請求失敗。", response.ok ? "ok" : "error");
+      } catch (error) {
+        setStatus("瀏覽器端錯誤：登出請求沒有完成。", "error");
+        outputEl.textContent = JSON.stringify({ message: error?.message ?? String(error) }, null, 2);
       }
     });
-
-    refreshSession();
   </script>
 </body>
 </html>
