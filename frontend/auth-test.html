@@ -3,195 +3,149 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HS-CHEM｜Auth 診斷頁</title>
+  <title>高校化學前哨戰｜學號登入測試</title>
   <style>
     :root { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    body { max-width: 760px; margin: 0 auto; padding: 32px 20px 64px; line-height: 1.6; }
-    .panel { border: 1px solid #c9c9c9; border-radius: 14px; padding: 20px; margin-top: 20px; }
-    label { display:block; font-weight:700; margin-top:14px; }
-    input { width:100%; box-sizing:border-box; padding:10px 12px; margin-top:6px; border:1px solid #aaa; border-radius:10px; font:inherit; }
-    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
-    button { padding:10px 14px; border-radius:10px; border:1px solid #999; cursor:pointer; font:inherit; font-weight:700; }
-    pre { white-space:pre-wrap; overflow-wrap:anywhere; background:#f3f3f3; color:#111; padding:14px; border-radius:10px; min-height:72px; }
-    .ok { color:#19703a; font-weight:700; }
-    .error { color:#b42318; font-weight:700; }
+    body { max-width: 720px; margin: 0 auto; padding: 40px 20px 72px; line-height: 1.6; }
+    .panel { border: 1px solid #d0d0d0; border-radius: 16px; padding: 22px; margin-top: 20px; }
+    label { display:block; font-weight:800; margin-bottom:8px; }
+    input { width:100%; box-sizing:border-box; padding:12px 14px; border:1px solid #aaa; border-radius:10px; font:inherit; }
+    button { margin-top:14px; padding:11px 16px; border-radius:10px; border:1px solid #888; font:inherit; font-weight:800; cursor:pointer; }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; background:#f4f4f4; color:#111; padding:14px; border-radius:10px; }
+    .ok { color:#19703a; font-weight:800; }
+    .error { color:#b42318; font-weight:800; }
     .muted { color:#666; }
   </style>
 </head>
 <body>
-  <h1>HS-CHEM｜Auth 診斷頁</h1>
-  <p class="muted">Development / test only。此版不依賴外部 Supabase JS CDN，直接呼叫 Supabase Auth HTTP API。</p>
+  <h1>高校化學前哨戰</h1>
+  <p class="muted">Development / test｜學號識別模式</p>
 
   <section class="panel">
-    <h2>測試帳號</h2>
-    <label for="email">Email</label>
-    <input id="email" type="email" autocomplete="username" value="YHtest@gmail.com">
-
-    <label for="password">Password</label>
-    <input id="password" type="password" autocomplete="current-password"
-      placeholder="請輸入測試密碼；密碼不會寫入 GitHub">
-
-    <div class="actions">
-      <button id="signUpBtn" type="button">建立測試帳號</button>
-      <button id="signInBtn" type="button">登入</button>
-      <button id="signOutBtn" type="button">登出本次測試</button>
-    </div>
+    <h2>學生登入</h2>
+    <label for="studentId">學號</label>
+    <input id="studentId" inputmode="text" autocomplete="off" placeholder="請輸入學號，例如 YHtest">
+    <button id="enterBtn" type="button">進入課程</button>
+    <button id="resetBtn" type="button">清除此瀏覽器測試身分</button>
   </section>
 
   <section class="panel">
-    <h2>診斷結果</h2>
-    <p id="status" class="ok">頁面 JavaScript 已啟動。</p>
-    <pre id="output">請輸入測試密碼後按「建立測試帳號」。</pre>
+    <h2>目前狀態</h2>
+    <p id="status" class="muted">正在檢查登入狀態…</p>
+    <pre id="output">—</pre>
   </section>
 
   <section class="panel">
-    <h2>安全邊界</h2>
+    <h2>目前測試邊界</h2>
     <ul>
-      <li>只使用 Project URL 與 publishable key。</li>
-      <li>不包含 service_role、secret key、Database password。</li>
-      <li>不顯示 access token / refresh token。</li>
-      <li>密碼只存在目前瀏覽器輸入欄位。</li>
+      <li>畫面只要求學號，不使用 Email 或 Password。</li>
+      <li>Supabase 背後使用 Anonymous Auth 產生 UUID。</li>
+      <li>未來 RLS 會使用 <code>auth.uid()</code>，不會拿學號或 user_metadata 當權限依據。</li>
+      <li>目前同一身分只能依賴此瀏覽器保存；換裝置、清除瀏覽資料或登出後，無法只靠學號恢復同一匿名帳號。</li>
     </ul>
   </section>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.116.0/+esm";
+
     const SUPABASE_URL = "https://ndtfapzcgxmaeqkisufz.supabase.co";
     const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_y8IYtpUSp3uRbqQYYuaDKQ_BdqLb9QA";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-    const emailEl = document.getElementById("email");
-    const passwordEl = document.getElementById("password");
+    const studentIdEl = document.getElementById("studentId");
     const statusEl = document.getElementById("status");
     const outputEl = document.getElementById("output");
-    let accessToken = null;
 
-    function setStatus(message, kind = "ok") {
+    function setStatus(message, kind = "muted") {
       statusEl.className = kind;
       statusEl.textContent = message;
     }
 
-    function credentials() {
-      const email = emailEl.value.trim();
-      const password = passwordEl.value;
-      if (!email || !password) throw new Error("請輸入 Email 與 Password。");
-      return { email, password };
+    function showSession(session, studentId) {
+      if (!session?.user) {
+        outputEl.textContent = "尚未建立測試身分。";
+        return;
+      }
+      outputEl.textContent = JSON.stringify({
+        student_id: studentId ?? null,
+        auth_user_id: session.user.id,
+        is_anonymous: session.user.is_anonymous ?? true,
+        role: session.user.role ?? "authenticated"
+      }, null, 2);
     }
 
-    function safeResult(response, body) {
-      const user = body && body.user ? body.user : (body && body.id ? body : null);
-      return {
-        http_status: response.status,
-        ok: response.ok,
-        error_code: body?.code ?? body?.error_code ?? null,
-        message: body?.msg ?? body?.message ?? body?.error_description ?? body?.error ?? null,
-        user: user ? {
-          id: user.id ?? null,
-          email: user.email ?? null,
-          email_confirmed_at: user.email_confirmed_at ?? null,
-          role: user.role ?? null
-        } : null
-      };
-    }
+    async function restore() {
+      const savedStudentId = localStorage.getItem("hschem_student_id");
+      if (savedStudentId) studentIdEl.value = savedStudentId;
 
-    async function post(path, payload, extraHeaders = {}) {
-      const response = await fetch(SUPABASE_URL + path, {
-        method: "POST",
-        headers: {
-          "apikey": SUPABASE_PUBLISHABLE_KEY,
-          "Content-Type": "application/json",
-          ...extraHeaders
-        },
-        body: JSON.stringify(payload)
-      });
-
-      let body = {};
-      try {
-        body = await response.json();
-      } catch {
-        body = { message: "回應不是 JSON。" };
-      }
-
-      return { response, body };
-    }
-
-    document.getElementById("signUpBtn").addEventListener("click", async () => {
-      try {
-        const { email, password } = credentials();
-        setStatus("正在送出註冊請求…", "muted");
-        outputEl.textContent = "—";
-
-        const { response, body } = await post("/auth/v1/signup", { email, password });
-        const result = safeResult(response, body);
-        outputEl.textContent = JSON.stringify(result, null, 2);
-
-        if (!response.ok) {
-          setStatus("Supabase 已收到請求，但拒絕建立帳號。請把上方診斷結果貼回來。", "error");
-          return;
-        }
-
-        accessToken = body.access_token ?? null;
-        if (result.user?.id) {
-          setStatus("註冊請求成功；已取得真正的 Supabase Auth UUID。", "ok");
-        } else {
-          setStatus("註冊請求成功，但回應未包含 user id；請把診斷結果貼回來。", "muted");
-        }
-      } catch (error) {
-        setStatus("瀏覽器端錯誤：註冊請求沒有完成。", "error");
-        outputEl.textContent = JSON.stringify({
-          error_type: error?.name ?? "Error",
-          message: error?.message ?? String(error)
-        }, null, 2);
-      }
-    });
-
-    document.getElementById("signInBtn").addEventListener("click", async () => {
-      try {
-        const { email, password } = credentials();
-        setStatus("正在送出登入請求…", "muted");
-        outputEl.textContent = "—";
-
-        const { response, body } = await post("/auth/v1/token?grant_type=password", { email, password });
-        const result = safeResult(response, body);
-        outputEl.textContent = JSON.stringify(result, null, 2);
-
-        if (!response.ok) {
-          setStatus("Supabase 已收到登入請求，但登入失敗。", "error");
-          return;
-        }
-
-        accessToken = body.access_token ?? null;
-        setStatus("登入成功。", "ok");
-      } catch (error) {
-        setStatus("瀏覽器端錯誤：登入請求沒有完成。", "error");
-        outputEl.textContent = JSON.stringify({
-          error_type: error?.name ?? "Error",
-          message: error?.message ?? String(error)
-        }, null, 2);
-      }
-    });
-
-    document.getElementById("signOutBtn").addEventListener("click", async () => {
-      if (!accessToken) {
-        setStatus("目前這個診斷頁沒有可登出的 Session。", "muted");
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        setStatus(error.message, "error");
         return;
       }
 
-      try {
-        const response = await fetch(SUPABASE_URL + "/auth/v1/logout", {
-          method: "POST",
-          headers: {
-            "apikey": SUPABASE_PUBLISHABLE_KEY,
-            "Authorization": "Bearer " + accessToken
-          }
-        });
-
-        accessToken = null;
-        outputEl.textContent = JSON.stringify({ http_status: response.status, ok: response.ok }, null, 2);
-        setStatus(response.ok ? "已登出本次測試。" : "登出請求失敗。", response.ok ? "ok" : "error");
-      } catch (error) {
-        setStatus("瀏覽器端錯誤：登出請求沒有完成。", "error");
-        outputEl.textContent = JSON.stringify({ message: error?.message ?? String(error) }, null, 2);
+      if (session?.user) {
+        setStatus("此瀏覽器已有測試身分，可直接接續。", "ok");
+        showSession(session, savedStudentId);
+      } else {
+        setStatus("請輸入學號後進入課程。");
+        showSession(null, null);
       }
+    }
+
+    document.getElementById("enterBtn").addEventListener("click", async () => {
+      const studentId = studentIdEl.value.trim();
+      if (!studentId) {
+        setStatus("請先輸入學號。", "error");
+        return;
+      }
+
+      setStatus("建立／讀取測試身分中…");
+      outputEl.textContent = "—";
+
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      const savedStudentId = localStorage.getItem("hschem_student_id");
+
+      if (existingSession?.user && savedStudentId === studentId) {
+        setStatus("登入成功：沿用此瀏覽器既有測試身分。", "ok");
+        showSession(existingSession, studentId);
+        return;
+      }
+
+      if (existingSession?.user && savedStudentId !== studentId) {
+        await supabase.auth.signOut();
+      }
+
+      const { data, error } = await supabase.auth.signInAnonymously({
+        options: {
+          data: { student_id: studentId }
+        }
+      });
+
+      if (error) {
+        setStatus("匿名登入失敗：" + error.message, "error");
+        outputEl.textContent = JSON.stringify({
+          message: error.message,
+          code: error.code ?? null,
+          status: error.status ?? null
+        }, null, 2);
+        return;
+      }
+
+      localStorage.setItem("hschem_student_id", studentId);
+      setStatus("登入成功。Supabase 已建立匿名 Auth UUID。", "ok");
+      showSession(data.session, studentId);
     });
+
+    document.getElementById("resetBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      localStorage.removeItem("hschem_student_id");
+      studentIdEl.value = "";
+      setStatus("已清除此瀏覽器的測試身分。");
+      showSession(null, null);
+    });
+
+    restore();
   </script>
 </body>
 </html>
